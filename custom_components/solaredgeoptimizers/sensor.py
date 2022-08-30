@@ -1,4 +1,5 @@
 """Platform for sensor integration."""
+from logging import Logger
 from homeassistant.helpers.entity import DeviceInfo
 
 from homeassistant.components.sensor import (
@@ -27,8 +28,11 @@ from .const import (
     SENSOR_TYPE_POWER,
     SENSOR_TYPE_VOLTAGE,
 )
+import logging
 
 SCAN_INTERVAL = UPDATE_DELAY
+
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
@@ -42,12 +46,26 @@ async def async_setup_entry(
 
     panelen = await hass.async_add_executor_job(client.requestAllData)
 
-    for paneel in panelen:
-        for sensortype in SENSOR_TYPE:
-            async_add_entities(
-                [SolarEdgeOptimizersSensor(client, entry, paneel, sensortype)],
-                update_before_add=True,
+    _LOGGER.info("Adding all optimizers found to Home Assistant")
+    try:
+        for paneel in panelen:
+            _LOGGER.info(
+                "Added optimizer for panel_id: {} to Home Assistant".format(
+                    paneel.paneel_desciption
+                )
             )
+            for sensortype in SENSOR_TYPE:
+                async_add_entities(
+                    [SolarEdgeOptimizersSensor(client, entry, paneel, sensortype)],
+                    update_before_add=False,
+                )
+    except Exception as ex:
+        _LOGGER.error("Error adding optimizers")
+        _LOGGER.error(ex)
+
+    _LOGGER.info(
+        "Done adding all optimizers. Now adding sensors, this may take some time!"
+    )
 
 
 class SolarEdgeOptimizersSensor(SensorEntity):
@@ -69,6 +87,7 @@ class SolarEdgeOptimizersSensor(SensorEntity):
         self._attr_unique_id = "{}_{}".format(paneel.serialnumber, sensortype)
         self._sensor_type = sensortype
         self._attr_name = self._sensor_type
+        # self._attr_name = "{}_{}".format(paneel.serialnumber, sensortype)
 
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{entry.entry_id}")},
@@ -108,7 +127,9 @@ class SolarEdgeOptimizersSensor(SensorEntity):
         try:
             paneel_info = self._client.requestSystemData(self._paneelobject.paneel_id)
         except Exception as err:
-            print(err)
+            _LOGGER.error(
+                "Error updating data for panel: {}".format(self._paneelobject.paneel_id)
+            )
             raise err
 
         # print(paneel_info)
@@ -124,13 +145,13 @@ class SolarEdgeOptimizersSensor(SensorEntity):
         elif self._sensor_type is SENSOR_TYPE_POWER:
             waarde = paneel_info.power
 
-        print(
-            "Update paneel: {}. Sensor type: {}. Waarde {} {}".format(
-                paneel_info.paneel_desciption,
-                self._sensor_type,
-                waarde,
-                self._attr_native_unit_of_measurement,
-            )
-        )
+        # print(
+        #     "Update paneel: {}. Sensor type: {}. Waarde {} {}".format(
+        #         paneel_info.paneel_desciption,
+        #         self._sensor_type,
+        #         waarde,
+        #         self._attr_native_unit_of_measurement,
+        #     )
+        # )
 
         self._attr_native_value = waarde

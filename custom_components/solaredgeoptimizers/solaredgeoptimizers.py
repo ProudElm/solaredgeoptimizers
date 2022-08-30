@@ -45,7 +45,7 @@ class solaredgeoptimizers:
         aantal_panelen = len(
             json_obj["logicalTree"]["children"][0]["children"][0]["children"]
         )
-        print(aantal_panelen)
+        # print(aantal_panelen)
 
         paneel_ids = []
 

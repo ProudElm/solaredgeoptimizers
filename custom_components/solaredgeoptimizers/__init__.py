@@ -14,9 +14,6 @@ PLATFORMS: list[Platform] = [Platform.SENSOR]
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up SolarEdge Optimizers Data from a config entry."""
 
-    # ELKE KEER RUNT DIT TIJDENS HET OPSTARTEN
-    # print("kom je hier bij het begin? Of elke keer?")
-    print("__init__.py -> async_setup_entry")
     api = solaredgeoptimizers(
         entry.data["siteid"], entry.data["username"], entry.data["password"]
     )
@@ -31,21 +28,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         LOGGER.error("Missing details data in SolarEdge response")
         raise ConfigEntryNotReady
 
-    # Hiet moeten we deels wat faken, want ik heb niet alles beschikbaar nog!
-    # De panelen lijst bv wel, belangrijk!
-
-    # panelen = await hass.async_add_executor_job(api.requestListOfAllPanels)
-
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = {DATA_API_CLIENT: api}
 
-    # print(panelen)
-    # for paneel in panelen:
-    #     print(paneel)
-    #     print("setup platforms for paneel: {}".format(paneel.split("|")[0]))
-    #     # print(hass.data)
-
-    #     hass.data[DOMAIN][PANEEL_DATA] = {PANEEL_DATA: paneel}
     hass.config_entries.async_setup_platforms(entry, PLATFORMS)
 
     return True
