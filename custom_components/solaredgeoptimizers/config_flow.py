@@ -44,10 +44,10 @@ class SolarEdgeWebAuth:
         http_result_code = await hass.async_add_executor_job(api.check_login)
         if http_result_code == 200:
             # All is well
-            print("All is well")
+            # print("All is well")
             return True
         else:
-            print("All is NOT well")
+            # print("All is NOT well")
             return False
 
 
@@ -75,7 +75,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> FlowResult:
         """Handle the initial step."""
 
-        print("config_flow.py -> async_step_user")
+        # print("config_flow.py -> async_step_user")
 
         if user_input is None:
             return self.async_show_form(
@@ -86,17 +86,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         try:
             info = await validate_input(self.hass, user_input)
-
-            # api = solaredgeoptimizers(
-            #     siteid=user_input["siteid"],
-            #     username=user_input["username"],
-            #     password=user_input["password"],
-            # )
-
-            # # panelen = api.requestListOfAllPanels()
-            # panelen = await self.hass.async_add_executor_job(api.requestListOfAllPanels)
-            # print(panelen)
-
         except CannotConnect:
             errors["base"] = "cannot_connect"
         except InvalidAuth:
@@ -105,27 +94,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             _LOGGER.exception("Unexpected exception")
             errors["base"] = "unknown"
         else:
-            print("Alles is klaar met de config_flow")
 
-            # max = len(panelen)
-            # current = 1
-            # for paneel in panelen:
-            #     print("paneel in config_flow: {}".format(paneel.split("|[0]")))
-            #     print("Bezig met {} van de {}".format(current, max))
-            #     user_input["paneel_info"] = paneel
-            #     if current == max:
-            # print("Run create entry 1")
-            # self.async_create_entry(title=info["title"], data=user_input)
-
-            # print("Run create entry 2")
             return self.async_create_entry(title=info["title"], data=user_input)
-            #     else:
-            #         self.async_create_entry(
-            #             title="Paneel: {}".format(paneel.split("|[0]")), data=user_input
-            #         )
-            #         current += 1
-
-            # return await self.async_step_dakvlakken()
 
         return self.async_show_form(
             step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
