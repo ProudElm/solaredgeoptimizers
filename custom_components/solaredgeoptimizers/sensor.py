@@ -1,5 +1,4 @@
 """Platform for sensor integration."""
-from logging import Logger
 from homeassistant.helpers.entity import DeviceInfo
 
 from homeassistant.components.sensor import (
@@ -7,6 +6,7 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorStateClass,
 )
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -50,9 +50,8 @@ async def async_setup_entry(
     try:
         for paneel in panelen:
             _LOGGER.info(
-                "Added optimizer for panel_id: {} to Home Assistant".format(
-                    paneel.paneel_desciption
-                )
+                "Added optimizer for panel_id: %s to Home Assistant",
+                paneel.paneel_desciption,
             )
             for sensortype in SENSOR_TYPE:
                 async_add_entities(
@@ -87,7 +86,6 @@ class SolarEdgeOptimizersSensor(SensorEntity):
         self._attr_unique_id = "{}_{}".format(paneel.serialnumber, sensortype)
         self._sensor_type = sensortype
         self._attr_name = self._sensor_type
-        # self._attr_name = "{}_{}".format(paneel.serialnumber, sensortype)
 
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{entry.entry_id}")},
@@ -128,7 +126,7 @@ class SolarEdgeOptimizersSensor(SensorEntity):
             paneel_info = self._client.requestSystemData(self._paneelobject.paneel_id)
         except Exception as err:
             _LOGGER.error(
-                "Error updating data for panel: {}".format(self._paneelobject.paneel_id)
+                "Error updating data for panel: %s", self._paneelobject.paneel_id
             )
             raise err
 
@@ -144,14 +142,5 @@ class SolarEdgeOptimizersSensor(SensorEntity):
             waarde = paneel_info.optimizer_voltage
         elif self._sensor_type is SENSOR_TYPE_POWER:
             waarde = paneel_info.power
-
-        # print(
-        #     "Update paneel: {}. Sensor type: {}. Waarde {} {}".format(
-        #         paneel_info.paneel_desciption,
-        #         self._sensor_type,
-        #         waarde,
-        #         self._attr_native_unit_of_measurement,
-        #     )
-        # )
 
         self._attr_native_value = waarde
