@@ -17,7 +17,14 @@ from homeassistant.const import (
     ELECTRIC_CURRENT_AMPERE,
 )
 
-from .solaredgeoptimizers import SolarEdgeOptimizerData, solaredgeoptimizers
+from .solaredgeoptimizers import (
+    SolarEdgeOptimizerData,
+    solaredgeoptimizers,
+    SolarEdgeSite,
+    SolarEdgeInverter,
+    SolarEdgeString,
+    SolarlEdgeOptimizer,
+)
 from .const import (
     DATA_API_CLIENT,
     DOMAIN,
@@ -44,23 +51,40 @@ async def async_setup_entry(
     # Add the needed sensors to hass
     client = hass.data[DOMAIN][entry.entry_id][DATA_API_CLIENT]
 
-    panelen = await hass.async_add_executor_job(client.requestAllData)
+    # panelen = await hass.async_add_executor_job(client.requestAllData)
+    site = await hass.async_add_executor_job(client.requestListOfAllPanels)
 
-    _LOGGER.info("Adding all optimizers found to Home Assistant")
-    try:
-        for paneel in panelen:
-            _LOGGER.info(
-                "Added optimizer for panel_id: %s to Home Assistant",
-                paneel.paneel_desciption,
-            )
-            for sensortype in SENSOR_TYPE:
-                async_add_entities(
-                    [SolarEdgeOptimizersSensor(client, entry, paneel, sensortype)],
-                    update_before_add=False,
+    _LOGGER.info("Found all information for site: %s", site.siteId)
+    _LOGGER.info("Site has %s inverters", len(site.inverters))
+    _LOGGER.info(
+        "Adding all optimizers (%s) found to Home Assistant",
+        site.returnNumberOfOptimizers(),
+    )
+
+    i = 1
+    for inverter in site.inverters:
+        _LOGGER.info("Adding all optimizers from inverter: %s", i)
+        for string in inverter.strings:
+            for optimizer in string.optimizers:
+                _LOGGER.info(
+                    "Added optimizer for panel_id: %s to Home Assistant",
+                    optimizer.displayName,
                 )
-    except Exception as ex:
-        _LOGGER.error("Error adding optimizers")
-        _LOGGER.error(ex)
+
+                # extra informatie ophalen
+                info = await hass.async_add_executor_job(
+                    client.requestSystemData, optimizer.optimizerId
+                )
+
+                for sensortype in SENSOR_TYPE:
+                    async_add_entities(
+                        [
+                            SolarEdgeOptimizersSensor(
+                                client, entry, info, sensortype, optimizer
+                            )
+                        ],
+                        update_before_add=False,
+                    )
 
     _LOGGER.info(
         "Done adding all optimizers. Now adding sensors, this may take some time!"
@@ -78,14 +102,16 @@ class SolarEdgeOptimizersSensor(SensorEntity):
         entry: ConfigEntry,
         paneel: SolarEdgeOptimizerData,
         sensortype,
+        optimizer: SolarlEdgeOptimizer,
     ) -> None:
         self._client = client
         self._entry = entry
         self._paneelobject = paneel
+        self._optimizerobject = optimizer
         self._paneel = paneel.paneel_desciption
         self._attr_unique_id = "{}_{}".format(paneel.serialnumber, sensortype)
         self._sensor_type = sensortype
-        self._attr_name = self._sensor_type
+        self._attr_name = "{}_{}".format(self._sensor_type, optimizer.displayName)
 
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{entry.entry_id}")},
@@ -111,7 +137,7 @@ class SolarEdgeOptimizersSensor(SensorEntity):
                 # Serial numbers are unique identifiers within a specific domain
                 (DOMAIN, self._paneelobject.serialnumber)
             },
-            "name": "Paneel: {}".format(self._paneel),
+            "name": self._optimizerobject.displayName,
             "manufacturer": self._paneelobject.manufacturer,
             "model": self._paneelobject.model,
             "hw_version": self._paneelobject.serialnumber,

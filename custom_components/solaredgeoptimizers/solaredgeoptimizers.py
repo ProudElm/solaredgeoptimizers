@@ -95,6 +95,15 @@ class SolarEdgeSite:
 
         return inverters
 
+    def returnNumberOfOptimizers(self):
+        i = 0
+
+        for inverter in self.inverters:
+            for string in inverter.strings:
+                i = i + len(string.optimizers)
+
+        return i
+
     def ReturnAllPanelsIds(self):
 
         panel_ids = []
@@ -138,7 +147,7 @@ class SolarEdgeInverter:
         ):
             strings.append(
                 SolarEdgeString(
-                    json_obj["logicalTree"]["children"][self.__index]["children"][i], i
+                    json_obj["logicalTree"]["children"][self.__index]["children"][i]
                 )
             )
 
@@ -146,8 +155,7 @@ class SolarEdgeInverter:
 
 
 class SolarEdgeString:
-    def __init__(self, json_obj, index):
-        self.__index = index
+    def __init__(self, json_obj):
         self.stringId = json_obj["data"]["id"]
         self.serialNumber = json_obj["data"]["serialNumber"]
         self.name = json_obj["data"]["name"]
@@ -162,14 +170,13 @@ class SolarEdgeString:
         optimizers = []
 
         for i in range(len(json_obj["children"])):
-            optimizers.append(SolarlEdgeOptimizer(json_obj["children"][i], i))
+            optimizers.append(SolarlEdgeOptimizer(json_obj["children"][i]))
 
         return optimizers
 
 
 class SolarlEdgeOptimizer:
-    def __init__(self, json_obj, index):
-        self.__index = index
+    def __init__(self, json_obj):
         self.optimizerId = json_obj["data"]["id"]
         self.serialNumber = json_obj["data"]["serialNumber"]
         self.name = json_obj["data"]["name"]
