@@ -2,6 +2,8 @@
 import requests
 import json
 from jsonfinder import jsonfinder
+import logging
+_LOGGER = logging.getLogger(__name__)
 
 # from requests.auth import HTTPBasicAuth
 
@@ -50,8 +52,12 @@ class solaredgeoptimizers:
         r = requests.get(url, **kwargs)
 
         if r.status_code == 200:
-
-            return SolarEdgeOptimizerData(itemId, decodeResult(r.text))
+            json_object = decodeResult(r.text)
+            if json_object["lastMeasurementDate"] == "":
+               _LOGGER.info("Skipping optimizer %s without measurements", itemId)
+               return None
+            else:
+               return SolarEdgeOptimizerData(itemId, json_object)
         else:
             print("Fout bij verzenden. Status code: {}".format(r.status_code))
             print(r.text)
@@ -66,7 +72,9 @@ class solaredgeoptimizers:
             for string in inverter.strings:
                 for optimizer in string.optimizers:
                     info = self.requestSystemData(optimizer.optimizerId)
-                    data.append(info)
+                    if info is not None:
+                       data.append(info)
+
         return data
 
 

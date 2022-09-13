@@ -75,16 +75,16 @@ async def async_setup_entry(
                 info = await hass.async_add_executor_job(
                     client.requestSystemData, optimizer.optimizerId
                 )
-
-                for sensortype in SENSOR_TYPE:
-                    async_add_entities(
-                        [
-                            SolarEdgeOptimizersSensor(
-                                client, entry, info, sensortype, optimizer
-                            )
-                        ],
-                        update_before_add=False,
-                    )
+                if info is not None:
+                   for sensortype in SENSOR_TYPE:
+                       async_add_entities(
+                           [
+                               SolarEdgeOptimizersSensor(
+                                   client, entry, info, sensortype, optimizer
+                               )
+                           ],
+                           update_before_add=False,
+                       )
 
     _LOGGER.info(
         "Done adding all optimizers. Now adding sensors, this may take some time!"
