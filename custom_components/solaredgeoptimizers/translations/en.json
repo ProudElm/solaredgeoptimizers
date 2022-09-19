@@ -6,7 +6,6 @@
         "error": {
             "cannot_connect": "Failed to connect",
             "invalid_auth": "Invalid authentication",
-            "invalid_number": "Invalid number of surfaces",
             "unknown": "Unexpected error"
         },
         "step": {
@@ -15,16 +14,6 @@
                     "siteid": "Site id",
                     "password": "Password",
                     "username": "Username"
-                }
-            },
-            "dakvlakken":{
-                "data": {
-                    "aantal": "Number of surfaces"
-                }
-            },
-            "naming":{
-                "data" : {
-                    "naam" : "Name of the surface"
                 }
             }
         }
