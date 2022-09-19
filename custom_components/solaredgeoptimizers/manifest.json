@@ -3,6 +3,7 @@
   "name": "SolarEdge Optimizers Data",
   "config_flow": true,
   "documentation": "https://github.com/ProudElm/solaredgeoptimizers",
+  "issue_tracker": "https://github.com/ProudElm/solaredgeoptimizers/issues",
   "requirements": ["jsonfinder==0.4.2"],
   "ssdp": [],
   "zeroconf": [],
