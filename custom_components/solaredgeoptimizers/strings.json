@@ -7,22 +7,11 @@
           "username": "[%key:common::config_flow::data::username%]",
           "password": "[%key:common::config_flow::data::password%]"
         }
-      },
-      "dakvlakken": {
-        "data":{
-          "aantal" : "[%key:common::config_flow::data::aantal%]"
-        }
-      },
-      "naming" : {
-        "data":{
-          "naam" : "[%key:common::config_flow::data::naam%]"
-        }
       }
     },
     "error": {
       "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
       "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
-      "invalid_number": ["%key:common::config_flow::error:invalid_number%"],
       "unknown": "[%key:common::config_flow::error::unknown%]"
     },
     "abort": {

@@ -6,7 +6,6 @@
         "error": {
             "cannot_connect": "Failed to connect",
             "invalid_auth": "Invalid authentication",
-            "invalid_number": "Ongeldig aantal dakvlakken",
             "unknown": "Unexpected error"
         },
         "step": {
@@ -15,16 +14,6 @@
                     "siteid": "Site nummer",
                     "password": "Wachtwoord",
                     "username": "Gebruikersnaam (Email)"
-                }
-            },
-            "dakvlakken":{
-                "data": {
-                    "aantal": "Aantal dakvlakken"
-                }
-            },
-            "naming":{
-                "data" : {
-                    "naam" : "Naam van het dakvlak"
                 }
             }
         }
