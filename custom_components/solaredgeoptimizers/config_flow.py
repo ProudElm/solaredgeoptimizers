@@ -16,14 +16,13 @@ from .solaredgeoptimizers import solaredgeoptimizers
 
 _LOGGER = logging.getLogger(__name__)
 
-
 STEP_USER_DATA_SCHEMA = vol.Schema(
-    {
-        vol.Required("siteid"): str,
-        vol.Required("username"): str,
-        vol.Required("password"): str,
-    }
-)
+     {
+         vol.Required("siteid"): str,
+         vol.Required("username"): str,
+         vol.Required("password"): str,
+     }
+ )
 
 
 class SolarEdgeWebAuth:

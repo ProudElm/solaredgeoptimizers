@@ -1,5 +1,6 @@
 """Platform for sensor integration."""
 from homeassistant.helpers.entity import DeviceInfo
+import json
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -15,6 +16,7 @@ from homeassistant.const import (
     POWER_WATT,
     ELECTRIC_POTENTIAL_VOLT,
     ELECTRIC_CURRENT_AMPERE,
+    ENERGY_KILO_WATT_HOUR,
 )
 
 from .solaredgeoptimizers import (
@@ -34,12 +36,15 @@ from .const import (
     SENSOR_TYPE_CURRENT,
     SENSOR_TYPE_POWER,
     SENSOR_TYPE_VOLTAGE,
+    SENSOR_TYPE_ENERGY,
 )
 import logging
 
 SCAN_INTERVAL = UPDATE_DELAY
 
 _LOGGER = logging.getLogger(__name__)
+
+temp_paneel = None
 
 
 async def async_setup_entry(
@@ -50,6 +55,8 @@ async def async_setup_entry(
     """Add an solarEdge entry."""
     # Add the needed sensors to hass
     client = hass.data[DOMAIN][entry.entry_id][DATA_API_CLIENT]
+
+    # entry.data["paneel"] = "boe"
 
     # panelen = await hass.async_add_executor_job(client.requestAllData)
     site = await hass.async_add_executor_job(client.requestListOfAllPanels)
@@ -76,15 +83,15 @@ async def async_setup_entry(
                     client.requestSystemData, optimizer.optimizerId
                 )
                 if info is not None:
-                   for sensortype in SENSOR_TYPE:
-                       async_add_entities(
-                           [
-                               SolarEdgeOptimizersSensor(
-                                   client, entry, info, sensortype, optimizer
-                               )
-                           ],
-                           update_before_add=False,
-                       )
+                    for sensortype in SENSOR_TYPE:
+                        async_add_entities(
+                            [
+                                SolarEdgeOptimizersSensor(
+                                    hass, client, entry, info, sensortype, optimizer
+                                )
+                            ],
+                            update_before_add=False,
+                        )
 
     _LOGGER.info(
         "Done adding all optimizers. Now adding sensors, this may take some time!"
@@ -98,12 +105,14 @@ class SolarEdgeOptimizersSensor(SensorEntity):
 
     def __init__(
         self,
+        hass: HomeAssistant,
         client: solaredgeoptimizers,
         entry: ConfigEntry,
         paneel: SolarEdgeOptimizerData,
         sensortype,
         optimizer: SolarlEdgeOptimizer,
     ) -> None:
+        self._hass = hass
         self._client = client
         self._entry = entry
         self._paneelobject = paneel
@@ -129,6 +138,9 @@ class SolarEdgeOptimizersSensor(SensorEntity):
         elif self._sensor_type is SENSOR_TYPE_POWER:
             self._attr_native_unit_of_measurement = POWER_WATT
             self._attr_device_class = SensorDeviceClass.POWER
+        elif self._sensor_type is SENSOR_TYPE_ENERGY:
+            self._attr_native_unit_of_measurement = ENERGY_KILO_WATT_HOUR
+            self._attr_device_class = SensorDeviceClass.ENERGY
 
     @property
     def device_info(self):
@@ -146,27 +158,68 @@ class SolarEdgeOptimizersSensor(SensorEntity):
 
     def update(self):
         """ddd"""
-        paneel_info = ""
+        global temp_paneel
 
-        try:
-            paneel_info = self._client.requestSystemData(self._paneelobject.paneel_id)
-        except Exception as err:
-            _LOGGER.error(
-                "Error updating data for panel: %s", self._paneelobject.paneel_id
-            )
-            raise err
-
-        # print(paneel_info)
-        # {'Current [A]': '7.47', 'Optimizer Voltage [V]': '39.75', 'Power [W]': '253.00', 'Voltage [V]': '33.88'}
         waarde = ""
 
-        if self._sensor_type is SENSOR_TYPE_VOLTAGE:
-            waarde = paneel_info.voltage
-        elif self._sensor_type is SENSOR_TYPE_CURRENT:
-            waarde = paneel_info.current
-        elif self._sensor_type is SENSOR_TYPE_OPT_VOLTAGE:
-            waarde = paneel_info.optimizer_voltage
-        elif self._sensor_type is SENSOR_TYPE_POWER:
-            waarde = paneel_info.power
+        # Voor totaal energie moeten we wat anders doen
+        if self._sensor_type is SENSOR_TYPE_ENERGY:
+            # waarde ophalen
+            lifetimeenergy = json.loads(self._client.getLifeTimeEnergy())
+            waarde = (
+                float(
+                    lifetimeenergy[str(self._paneelobject.paneel_id)]["unscaledEnergy"]
+                )
+            ) / 1000
+        else:
+
+            try:
+
+                if temp_paneel == None:
+                    paneel_info = self._client.requestSystemData(
+                        self._paneelobject.paneel_id
+                    )
+                    temp_paneel = paneel_info
+                    _LOGGER.info(
+                        "Paneel data opgehaald, geheugen was leeg. Paneel {}".format(
+                            self._paneelobject.paneel_desciption
+                        )
+                    )
+                elif temp_paneel.paneel_id is not self._paneelobject.paneel_id:
+                    paneel_info = self._client.requestSystemData(
+                        self._paneelobject.paneel_id
+                    )
+                    temp_paneel = paneel_info
+                    _LOGGER.info(
+                        "Paneel data opgehaald, verkeerd paneel in geheugen. Paneel {}".format(
+                            self._paneelobject.paneel_desciption
+                        )
+                    )
+                else:
+                    paneel_info = temp_paneel
+                    _LOGGER.info("Paneel data uit geheugen opgehaald")
+
+            except Exception as err:
+                _LOGGER.error(
+                    "Error updating data for panel: %s", self._paneelobject.paneel_id
+                )
+                raise err
+
+            # print(paneel_info)
+            # {'Current [A]': '7.47', 'Optimizer Voltage [V]': '39.75', 'Power [W]': '253.00', 'Voltage [V]': '33.88'}
+
+            waarde = ""
+
+            if paneel_info is not None:
+                if self._sensor_type is SENSOR_TYPE_VOLTAGE:
+                    waarde = paneel_info.voltage
+                elif self._sensor_type is SENSOR_TYPE_CURRENT:
+                    waarde = paneel_info.current
+                elif self._sensor_type is SENSOR_TYPE_OPT_VOLTAGE:
+                    waarde = paneel_info.optimizer_voltage
+                elif self._sensor_type is SENSOR_TYPE_POWER:
+                    waarde = paneel_info.power
+            else:
+                return
 
         self._attr_native_value = waarde
