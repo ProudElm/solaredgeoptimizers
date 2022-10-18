@@ -45,6 +45,7 @@ SCAN_INTERVAL = UPDATE_DELAY
 _LOGGER = logging.getLogger(__name__)
 
 temp_paneel = None
+temp_lifetimeenergy = None
 
 
 async def async_setup_entry(
@@ -56,9 +57,6 @@ async def async_setup_entry(
     # Add the needed sensors to hass
     client = hass.data[DOMAIN][entry.entry_id][DATA_API_CLIENT]
 
-    # entry.data["paneel"] = "boe"
-
-    # panelen = await hass.async_add_executor_job(client.requestAllData)
     site = await hass.async_add_executor_job(client.requestListOfAllPanels)
 
     _LOGGER.info("Found all information for site: %s", site.siteId)
@@ -165,12 +163,35 @@ class SolarEdgeOptimizersSensor(SensorEntity):
         # Voor totaal energie moeten we wat anders doen
         if self._sensor_type is SENSOR_TYPE_ENERGY:
             # waarde ophalen
-            lifetimeenergy = json.loads(self._client.getLifeTimeEnergy())
-            waarde = (
-                float(
-                    lifetimeenergy[str(self._paneelobject.paneel_id)]["unscaledEnergy"]
+            response = ""
+
+            try:
+                response = self._client.getLifeTimeEnergy()
+
+                if response != "":
+
+                    if "ERROR001" in response:
+                        _LOGGER.error(
+                            "Error updating life time energy data for panel: %s",
+                            self._paneelobject.paneel_id,
+                        )
+                        _LOGGER.error("The response was: %s", response)
+                    else:
+                        lifetimeenergy = json.loads(self._client.getLifeTimeEnergy())
+                        waarde = (
+                            float(
+                                lifetimeenergy[str(self._paneelobject.paneel_id)][
+                                    "unscaledEnergy"
+                                ]
+                            )
+                        ) / 1000
+            except Exception as err:
+                _LOGGER.error(
+                    "Error updating life time energy data for panel: %s",
+                    self._paneelobject.paneel_id,
                 )
-            ) / 1000
+                _LOGGER.error(err)
+                _LOGGER.error("The response was: %s", response)
         else:
 
             try:
@@ -181,9 +202,8 @@ class SolarEdgeOptimizersSensor(SensorEntity):
                     )
                     temp_paneel = paneel_info
                     _LOGGER.info(
-                        "Paneel data opgehaald, geheugen was leeg. Paneel {}".format(
-                            self._paneelobject.paneel_desciption
-                        )
+                        "Paneel data opgehaald, geheugen was leeg. Paneel %s",
+                        self._paneelobject.paneel_desciption,
                     )
                 elif temp_paneel.paneel_id is not self._paneelobject.paneel_id:
                     paneel_info = self._client.requestSystemData(
@@ -191,9 +211,8 @@ class SolarEdgeOptimizersSensor(SensorEntity):
                     )
                     temp_paneel = paneel_info
                     _LOGGER.info(
-                        "Paneel data opgehaald, verkeerd paneel in geheugen. Paneel {}".format(
-                            self._paneelobject.paneel_desciption
-                        )
+                        "Paneel data opgehaald, verkeerd paneel in geheugen. Paneel %s",
+                        self._paneelobject.paneel_desciption,
                     )
                 else:
                     paneel_info = temp_paneel

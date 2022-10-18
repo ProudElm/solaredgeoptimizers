@@ -86,7 +86,9 @@ class solaredgeoptimizers:
     def getLifeTimeEnergy(self):
         session = Session()
         session.head(
-            "https://monitoring.solaredge.com/solaredge-apigw/api/sites/1871534/layout/energy"
+            "https://monitoring.solaredge.com/solaredge-apigw/api/sites/{}/layout/energy".format(
+                self.siteid
+            )
         )
 
         url = "https://monitoring.solaredge.com/solaredge-web/p/login"
@@ -103,7 +105,9 @@ class solaredgeoptimizers:
 
         # Build up the request.
         response = session.post(
-            url="https://monitoring.solaredge.com/solaredge-apigw/api/sites/1871534/layout/energy?timeUnit=ALL",
+            url="https://monitoring.solaredge.com/solaredge-apigw/api/sites/{}/layout/energy?timeUnit=ALL".format(
+                self.siteid
+            ),
             headers={
                 "authority": "monitoring.solaredge.com",
                 "accept": "*/*",
@@ -111,7 +115,9 @@ class solaredgeoptimizers:
                 "content-type": "application/json",
                 "cookie": therightcookie,
                 "origin": "https://monitoring.solaredge.com",
-                "referer": "https://monitoring.solaredge.com/solaredge-web/p/site/1871534/",
+                "referer": "https://monitoring.solaredge.com/solaredge-web/p/site/{}/".format(
+                    self.siteid
+                ),
                 "sec-ch-ua": '"Google Chrome";v="105", "Not)A;Brand";v="8", "Chromium";v="105"',
                 "sec-ch-ua-mobile": "?0",
                 "sec-ch-ua-platform": '"Windows"',
@@ -128,7 +134,7 @@ class solaredgeoptimizers:
         if response.status_code == 200:
             return response.text
         else:
-            return "ERROR - HTTP CODE: {}".format(response.status_code)
+            return "ERROR001 - HTTP CODE: {}".format(response.status_code)
 
     def GetThecsrfToken(self, cookies):
         for cookie in cookies:
