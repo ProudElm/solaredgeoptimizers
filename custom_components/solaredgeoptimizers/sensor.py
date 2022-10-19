@@ -178,13 +178,13 @@ class SolarEdgeOptimizersSensor(SensorEntity):
                         _LOGGER.error("The response was: %s", response)
                     else:
                         lifetimeenergy = json.loads(self._client.getLifeTimeEnergy())
-                        waarde = (
+                        waarde = round((
                             float(
                                 lifetimeenergy[str(self._paneelobject.paneel_id)][
                                     "unscaledEnergy"
                                 ]
                             )
-                        ) / 1000
+                         / 1000 ),2)
             except Exception as err:
                 _LOGGER.error(
                     "Error updating life time energy data for panel: %s",
