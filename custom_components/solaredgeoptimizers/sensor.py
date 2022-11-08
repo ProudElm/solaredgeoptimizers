@@ -40,6 +40,8 @@ from .const import (
 )
 import logging
 
+from datetime import datetime, timedelta
+
 SCAN_INTERVAL = UPDATE_DELAY
 
 _LOGGER = logging.getLogger(__name__)
@@ -56,7 +58,6 @@ async def async_setup_entry(
     """Add an solarEdge entry."""
     # Add the needed sensors to hass
     client = hass.data[DOMAIN][entry.entry_id][DATA_API_CLIENT]
-
     site = await hass.async_add_executor_job(client.requestListOfAllPanels)
 
     _LOGGER.info("Found all information for site: %s", site.siteId)
@@ -177,7 +178,7 @@ class SolarEdgeOptimizersSensor(SensorEntity):
                         )
                         _LOGGER.error("The response was: %s", response)
                     else:
-                        lifetimeenergy = json.loads(self._client.getLifeTimeEnergy())
+                        lifetimeenergy = json.loads(response)
                         waarde = (
                             float(
                                 lifetimeenergy[str(self._paneelobject.paneel_id)][
@@ -185,6 +186,13 @@ class SolarEdgeOptimizersSensor(SensorEntity):
                                 ]
                             )
                         ) / 1000
+
+                # weird first time after reboot value is None
+                if self._attr_native_value is not None:
+                    if waarde <= self._attr_native_value:
+                        _LOGGER.debug("No new value for life time energy found.")
+                        # waarde = self._attr_native_value
+
             except Exception as err:
                 _LOGGER.error(
                     "Error updating life time energy data for panel: %s",
@@ -226,6 +234,13 @@ class SolarEdgeOptimizersSensor(SensorEntity):
 
             # print(paneel_info)
             # {'Current [A]': '7.47', 'Optimizer Voltage [V]': '39.75', 'Power [W]': '253.00', 'Voltage [V]': '33.88'}
+
+            # We only update the sensor when the data is 'new'
+            timetocheck = datetime.now() - timedelta(hours=0, minutes=10)
+
+            if paneel_info.lastmeasurement < timetocheck:
+
+                return
 
             waarde = ""
 

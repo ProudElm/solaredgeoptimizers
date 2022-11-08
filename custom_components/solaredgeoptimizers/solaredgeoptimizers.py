@@ -4,6 +4,7 @@ import json
 from jsonfinder import jsonfinder
 import logging
 from requests import Session
+from datetime import datetime, timedelta
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -306,8 +307,13 @@ class SolarEdgeOptimizerData:
             self.serialnumber = json_object["serialNumber"]
             self.paneel_id = paneelid
             self.paneel_desciption = json_object["description"]
-            self.lastmeasurement = json_object["lastMeasurementDate"]
+            rawdate = json_object["lastMeasurementDate"]
+            # Tue Nov 01 16:53:41 GMT 2022
+            self.lastmeasurement = datetime.strptime(
+                rawdate, "%a %b %d %H:%M:%S GMT %Y"
+            )
             self.model = json_object["model"]
+
             self.manufacturer = json_object["manufacturer"]
 
             # Waarden
