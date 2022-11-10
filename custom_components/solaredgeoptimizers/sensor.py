@@ -191,7 +191,7 @@ class SolarEdgeOptimizersSensor(SensorEntity):
                 if self._attr_native_value is not None:
                     if waarde <= self._attr_native_value:
                         _LOGGER.debug("No new value for life time energy found.")
-                        # waarde = self._attr_native_value
+                        waarde = self._attr_native_value
 
             except Exception as err:
                 _LOGGER.error(
