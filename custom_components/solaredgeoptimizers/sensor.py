@@ -22,11 +22,9 @@ from homeassistant.const import (
 from .solaredgeoptimizers import (
     SolarEdgeOptimizerData,
     solaredgeoptimizers,
-    SolarEdgeSite,
-    SolarEdgeInverter,
-    SolarEdgeString,
     SolarlEdgeOptimizer,
 )
+
 from .const import (
     DATA_API_CLIENT,
     DOMAIN,
@@ -89,7 +87,7 @@ async def async_setup_entry(
                                     hass, client, entry, info, sensortype, optimizer
                                 )
                             ],
-                            update_before_add=False,
+                            update_before_add=True,
                         )
 
     _LOGGER.info(
@@ -190,7 +188,7 @@ class SolarEdgeOptimizersSensor(SensorEntity):
                 # weird first time after reboot value is None
                 if self._attr_native_value is not None:
                     if waarde <= self._attr_native_value:
-                        _LOGGER.debug("No new value for life time energy found.")
+                        _LOGGER.warning("No new value for life time energy found.")
                         waarde = self._attr_native_value
 
             except Exception as err:
@@ -236,11 +234,12 @@ class SolarEdgeOptimizersSensor(SensorEntity):
             # {'Current [A]': '7.47', 'Optimizer Voltage [V]': '39.75', 'Power [W]': '253.00', 'Voltage [V]': '33.88'}
 
             # We only update the sensor when the data is 'new'
-            timetocheck = datetime.now() - timedelta(hours=0, minutes=10)
-
-            if paneel_info.lastmeasurement < timetocheck:
-
-                return
+            # But only ofcourse if there is even a value.
+            if self._attr_native_value is not None:
+                timetocheck = datetime.now() - timedelta(hours=0, minutes=10)
+                if paneel_info.lastmeasurement < timetocheck:
+                    _LOGGER.warning("Latest measerement not old enough.")
+                    return
 
             waarde = ""
 
