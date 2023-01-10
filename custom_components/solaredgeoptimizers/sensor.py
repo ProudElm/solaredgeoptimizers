@@ -1,6 +1,15 @@
-"""Platform for sensor integration."""
+"""Example integration using DataUpdateCoordinator."""
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
-import json
+
+from datetime import datetime, timedelta
+
+import logging
+
+import async_timeout
+import pytz
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -8,21 +17,12 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.core import callback
 
-from homeassistant.const import (
-    POWER_WATT,
-    ELECTRIC_POTENTIAL_VOLT,
-    ELECTRIC_CURRENT_AMPERE,
-    ENERGY_KILO_WATT_HOUR,
-)
-
-from .solaredgeoptimizers import (
-    SolarEdgeOptimizerData,
-    solaredgeoptimizers,
-    SolarlEdgeOptimizer,
+from homeassistant.helpers.update_coordinator import (
+    CoordinatorEntity,
+    DataUpdateCoordinator,
+    UpdateFailed,
 )
 
 from .const import (
@@ -35,17 +35,32 @@ from .const import (
     SENSOR_TYPE_POWER,
     SENSOR_TYPE_VOLTAGE,
     SENSOR_TYPE_ENERGY,
+    SENSOR_TYPE_LASTMEASUREMENT,
 )
-import logging
 
-from datetime import datetime, timedelta
 
-SCAN_INTERVAL = UPDATE_DELAY
+from homeassistant.const import (
+    POWER_WATT,
+    ELECTRIC_POTENTIAL_VOLT,
+    ELECTRIC_CURRENT_AMPERE,
+    ENERGY_KILO_WATT_HOUR,
+)
+
+# FROM 2023.2!
+# from homeassistant.const import (
+#     UnitOfPower,
+#     UnitOfElectricPotential,
+#     UnitOfElectricCurrent,
+#     UnitOfEnergy,
+# )
+
+from solaredgeoptimizers import (
+    SolarEdgeOptimizerData,
+    solaredgeoptimizers,
+    SolarlEdgeOptimizer,
+)
 
 _LOGGER = logging.getLogger(__name__)
-
-temp_paneel = None
-temp_lifetimeenergy = None
 
 
 async def async_setup_entry(
@@ -55,8 +70,10 @@ async def async_setup_entry(
 ) -> None:
     """Add an solarEdge entry."""
     # Add the needed sensors to hass
-    client = hass.data[DOMAIN][entry.entry_id][DATA_API_CLIENT]
-    site = await hass.async_add_executor_job(client.requestListOfAllPanels)
+    my_api = hass.data[DOMAIN][entry.entry_id][DATA_API_CLIENT]
+    site = await hass.async_add_executor_job(my_api.requestListOfAllPanels)
+
+    coordinator = MyCoordinator(hass, my_api, True)
 
     _LOGGER.info("Found all information for site: %s", site.siteId)
     _LOGGER.info("Site has %s inverters", len(site.inverters))
@@ -77,14 +94,20 @@ async def async_setup_entry(
 
                 # extra informatie ophalen
                 info = await hass.async_add_executor_job(
-                    client.requestSystemData, optimizer.optimizerId
+                    my_api.requestSystemData, optimizer.optimizerId
                 )
+
                 if info is not None:
                     for sensortype in SENSOR_TYPE:
                         async_add_entities(
                             [
                                 SolarEdgeOptimizersSensor(
-                                    hass, client, entry, info, sensortype, optimizer
+                                    coordinator,
+                                    hass,
+                                    entry,
+                                    info,
+                                    sensortype,
+                                    optimizer,
                                 )
                             ],
                             update_before_add=True,
@@ -95,22 +118,97 @@ async def async_setup_entry(
     )
 
 
-class SolarEdgeOptimizersSensor(SensorEntity):
-    """bbbb"""
+class MyCoordinator(DataUpdateCoordinator):
+    """My custom coordinator."""
+
+    def __init__(self, hass, my_api: solaredgeoptimizers, first_boot):
+        """Initialize my coordinator."""
+        super().__init__(
+            hass,
+            _LOGGER,
+            # Name of the data. For logging purposes.
+            name="SolarEdgeOptimizer",
+            # Polling interval. Will only be polled if there are subscribers.
+            update_interval=UPDATE_DELAY,
+        )
+        self.my_api = my_api
+        self.first_boot = first_boot
+
+    async def _async_update_data(self):
+        """Fetch data from API endpoint.
+
+        This is the place to pre-process the data to lookup tables
+        so entities can quickly look up their data.
+        """
+        try:
+            # Note: asyncio.TimeoutError and aiohttp.ClientError are already
+            # handled by the data update coordinator.
+            async with async_timeout.timeout(60):
+                _LOGGER.debug("Update vanuit de coordinator")
+                data = await self.hass.async_add_executor_job(
+                    self.my_api.requestAllData
+                )
+
+                now = datetime.now()
+                local_now = now.astimezone()
+                local_tz = local_now.tzinfo
+                local_tzname = local_tz.tzname(local_now)
+
+                # we need to check if we indeed need to update it all...
+                update = False
+                # timetocheck = datetime.now() - timedelta(hours=0, minutes=10)
+
+                timetocheck = datetime.now(pytz.timezone(local_tzname)) - timedelta(
+                    hours=1, minutes=00
+                )
+
+                for optimizer in data:
+                    _LOGGER.debug(
+                        "Checking time: %s | Versus last measerument: %s",
+                        timetocheck,
+                        optimizer.lastmeasurement,
+                    )
+                    if optimizer.lastmeasurement > timetocheck:
+                        update = True
+                        break
+
+                if update or self.first_boot:
+                    _LOGGER.debug("We voeren nieuwe gegevens door")
+                    self.first_boot = False
+                    return data
+                else:
+                    _LOGGER.debug("Geen nieuwe gegevens door te voeren")
+                    return None
+
+        except Exception as err:
+            raise UpdateFailed(err)
+
+
+# class MyEntity(CoordinatorEntity, SensorEntity):
+class SolarEdgeOptimizersSensor(CoordinatorEntity, SensorEntity):
+    """An entity using CoordinatorEntity.
+
+    The CoordinatorEntity class provides:
+      should_poll
+      async_update
+      async_added_to_hass
+      available
+
+    """
 
     _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(
         self,
+        coordinator,
         hass: HomeAssistant,
-        client: solaredgeoptimizers,
         entry: ConfigEntry,
         paneel: SolarEdgeOptimizerData,
         sensortype,
         optimizer: SolarlEdgeOptimizer,
     ) -> None:
+        super().__init__(coordinator)
         self._hass = hass
-        self._client = client
         self._entry = entry
         self._paneelobject = paneel
         self._optimizerobject = optimizer
@@ -125,18 +223,23 @@ class SolarEdgeOptimizersSensor(SensorEntity):
 
         if self._sensor_type is SENSOR_TYPE_VOLTAGE:
             self._attr_native_unit_of_measurement = ELECTRIC_POTENTIAL_VOLT
+            # self._attr_native_unit_of_measurement = UnitOfElectricPotential.VOLT
             self._attr_device_class = SensorDeviceClass.VOLTAGE
         elif self._sensor_type is SENSOR_TYPE_CURRENT:
             self._attr_native_unit_of_measurement = ELECTRIC_CURRENT_AMPERE
+            # self._attr_native_unit_of_measurement = UnitOfElectricCurrent.AMPERE
             self._attr_device_class = SensorDeviceClass.CURRENT
         elif self._sensor_type is SENSOR_TYPE_OPT_VOLTAGE:
             self._attr_native_unit_of_measurement = ELECTRIC_POTENTIAL_VOLT
+            # self._attr_native_unit_of_measurement = UnitOfElectricPotential.VOLT
             self._attr_device_class = SensorDeviceClass.VOLTAGE
         elif self._sensor_type is SENSOR_TYPE_POWER:
             self._attr_native_unit_of_measurement = POWER_WATT
+            # self._attr_native_unit_of_measurement = UnitOfPower.WATT
             self._attr_device_class = SensorDeviceClass.POWER
         elif self._sensor_type is SENSOR_TYPE_ENERGY:
             self._attr_native_unit_of_measurement = ENERGY_KILO_WATT_HOUR
+            # self._attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
             self._attr_device_class = SensorDeviceClass.ENERGY
 
     @property
@@ -153,106 +256,48 @@ class SolarEdgeOptimizersSensor(SensorEntity):
             "via_device": (DOMAIN, self._entry.entry_id),
         }
 
-    def update(self):
-        """ddd"""
-        global temp_paneel
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        _LOGGER.debug(
+            "De sensor %s - %s updaten met de info van de coordinator",
+            self._paneelobject.paneel_id,
+            self._sensor_type,
+        )
 
-        waarde = ""
-
-        # Voor totaal energie moeten we wat anders doen
-        if self._sensor_type is SENSOR_TYPE_ENERGY:
-            # waarde ophalen
-            response = ""
-
-            try:
-                response = self._client.getLifeTimeEnergy()
-
-                if response != "":
-
-                    if "ERROR001" in response:
-                        _LOGGER.error(
-                            "Error updating life time energy data for panel: %s",
-                            self._paneelobject.paneel_id,
-                        )
-                        _LOGGER.error("The response was: %s", response)
-                    else:
-                        lifetimeenergy = json.loads(response)
-                        waarde = (
-                            float(
-                                lifetimeenergy[str(self._paneelobject.paneel_id)][
-                                    "unscaledEnergy"
-                                ]
-                            )
-                        ) / 1000
-
-                # weird first time after reboot value is None
-                if self._attr_native_value is not None:
-                    if waarde <= self._attr_native_value:
-                        _LOGGER.warning("No new value for life time energy found.")
-                        waarde = self._attr_native_value
-
-            except Exception as err:
-                _LOGGER.error(
-                    "Error updating life time energy data for panel: %s",
-                    self._paneelobject.paneel_id,
-                )
-                _LOGGER.error(err)
-                _LOGGER.error("The response was: %s", response)
+        if self.coordinator.data is not None:
+            for item in self.coordinator.data:
+                if item.paneel_id == self._paneelobject.paneel_id:
+                    # weird first time after reboot value is None
+                    # if self._attr_native_value is not None:
+                    if self._sensor_type is SENSOR_TYPE_VOLTAGE:
+                        self._attr_native_value = item.voltage
+                        break
+                    elif self._sensor_type is SENSOR_TYPE_CURRENT:
+                        self._attr_native_value = item.current
+                        break
+                    elif self._sensor_type is SENSOR_TYPE_OPT_VOLTAGE:
+                        self._attr_native_value = item.optimizer_voltage
+                        break
+                    elif self._sensor_type is SENSOR_TYPE_POWER:
+                        self._attr_native_value = item.power
+                        break
+                    elif self._sensor_type is SENSOR_TYPE_ENERGY:
+                        if (
+                            self._attr_native_value is None
+                            or item.lifetime_energy >= self._attr_native_value
+                        ):
+                            self._attr_native_value = item.lifetime_energy
+                            break
+                    elif self._sensor_type is SENSOR_TYPE_LASTMEASUREMENT:
+                        self._attr_native_value = item.lastmeasurement
+                        break
         else:
+            # Set the value to zero. (BUT NOT FOR LIFETIME ENERGY)
+            if (
+                not self._sensor_type is SENSOR_TYPE_ENERGY
+                or self._sensor_type is SENSOR_TYPE_LASTMEASUREMENT
+            ):
+                self._attr_native_value = 0
 
-            try:
-
-                if temp_paneel == None:
-                    paneel_info = self._client.requestSystemData(
-                        self._paneelobject.paneel_id
-                    )
-                    temp_paneel = paneel_info
-                    _LOGGER.info(
-                        "Paneel data opgehaald, geheugen was leeg. Paneel %s",
-                        self._paneelobject.paneel_desciption,
-                    )
-                elif temp_paneel.paneel_id is not self._paneelobject.paneel_id:
-                    paneel_info = self._client.requestSystemData(
-                        self._paneelobject.paneel_id
-                    )
-                    temp_paneel = paneel_info
-                    _LOGGER.info(
-                        "Paneel data opgehaald, verkeerd paneel in geheugen. Paneel %s",
-                        self._paneelobject.paneel_desciption,
-                    )
-                else:
-                    paneel_info = temp_paneel
-                    _LOGGER.info("Paneel data uit geheugen opgehaald")
-
-            except Exception as err:
-                _LOGGER.error(
-                    "Error updating data for panel: %s", self._paneelobject.paneel_id
-                )
-                raise err
-
-            # print(paneel_info)
-            # {'Current [A]': '7.47', 'Optimizer Voltage [V]': '39.75', 'Power [W]': '253.00', 'Voltage [V]': '33.88'}
-
-            # We only update the sensor when the data is 'new'
-            # But only ofcourse if there is even a value.
-            if self._attr_native_value is not None:
-                timetocheck = datetime.now() - timedelta(hours=0, minutes=10)
-                if paneel_info.lastmeasurement < timetocheck:
-                    _LOGGER.warning("Latest measerement not old enough.")
-                    return
-
-            waarde = ""
-
-            if paneel_info is not None:
-                if self._sensor_type is SENSOR_TYPE_VOLTAGE:
-                    waarde = paneel_info.voltage
-                elif self._sensor_type is SENSOR_TYPE_CURRENT:
-                    waarde = paneel_info.current
-                elif self._sensor_type is SENSOR_TYPE_OPT_VOLTAGE:
-                    waarde = paneel_info.optimizer_voltage
-                elif self._sensor_type is SENSOR_TYPE_POWER:
-                    waarde = paneel_info.power
-            else:
-                return
-
-        self._attr_native_value = waarde
+        self.async_write_ha_state()

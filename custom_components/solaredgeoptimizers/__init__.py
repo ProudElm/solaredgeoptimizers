@@ -5,7 +5,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 
-from .solaredgeoptimizers import solaredgeoptimizers
+from solaredgeoptimizers import solaredgeoptimizers
 from .const import CONF_SITE_ID, DOMAIN, LOGGER, DATA_API_CLIENT, PANEEL_DATA
 
 PLATFORMS: list[Platform] = [Platform.SENSOR]

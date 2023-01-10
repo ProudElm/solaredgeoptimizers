@@ -12,7 +12,8 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 
 from .const import DOMAIN
-from .solaredgeoptimizers import solaredgeoptimizers
+
+from solaredgeoptimizers import solaredgeoptimizers
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,11 +43,8 @@ class SolarEdgeWebAuth:
         # http_result_code = api.check_login()
         http_result_code = await hass.async_add_executor_job(api.check_login)
         if http_result_code == 200:
-            # All is well
-            # print("All is well")
             return True
         else:
-            # print("All is NOT well")
             return False
 
 
@@ -61,7 +59,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         raise InvalidAuth
 
     # Return info that you want to store in the config entry.
-    return {"title": "SolarEdge Transformer"}
+    return {"title": "SolarEdge Site {}".format(data["siteid"])}
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
