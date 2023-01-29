@@ -2,7 +2,8 @@
   "domain": "solaredgeoptimizers",
   "name": "SolarEdge Optimizers Data",
   "config_flow": true,
-  "documentation": "https://www.home-assistant.io/integrations/solaredgeoptimizers",
+  "documentation": "https://github.com/ProudElm/solaredgeoptimizers",
+  "issue_tracker": "https://github.com/ProudElm/solaredgeoptimizers/issues",
   "requirements": [
     "solaredgeoptimizers==1.0.8",
     "jsonfinder==0.4.2"
@@ -15,5 +16,5 @@
     "@proudelm"
   ],
   "iot_class": "cloud_polling",
-  "version": "1.1.9"
+  "version": "1.2.0"
 }
