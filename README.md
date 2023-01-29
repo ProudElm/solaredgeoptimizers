@@ -19,3 +19,7 @@ The best method is using HACS (https://hacs.xyz)
 7.  Enter your Site-ID, username and password.
 
 The initial setup can take some time, please be patient.
+
+# UI
+An other user made a HA card to display the information:
+https://github.com/stepsolar/hassio-package-panel-solar
