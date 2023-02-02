@@ -1,12 +1,12 @@
 # SolarEdge Optimizers Data
 Intergration to get optimizers information from the SolarEdge portal
 
-This intergrations works by gathering the information from the SolarEdge portal website. The current data per optimizer is gather and show in HomeAssistant. Also is the total energy produced per optimizer added as sensor.
+This integration works by gathering the information from the SolarEdge portal website. The current data per optimizer is gather and shown in HomeAssistant. Also is the total energy produced per optimizer is added as sensor.
 For this intergration to work you need to provide it with your information: your Site-id, your username and password.
 
-Tis intergration will update its sensors every 15 min. More frequant is not usefull beacsuse the portal will only update that much.
+This intergration will update its sensors every 15 minutes. More frequent is not usefull because the portal will only update every 15 minutes.
 
-When the inverter is not working, the last know result is send back from the portal. The intergation will check if the value for last measerement is less then 1 hour. If not, meaning the inverter is offline, the value for all sensors (except Last measerement and total energy produced) will be set to 0. 
+When the inverter is not working, the last know result is send back from the portal. The intergation will check if the value for last measerement is less then 1 hour. If not, meaning the inverter is offline, the value for all sensors (except Last measurement and total energy produced) will be set to 0. 
 
 # Installation
 The best method is using HACS (https://hacs.xyz)
