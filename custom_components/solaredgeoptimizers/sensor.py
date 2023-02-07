@@ -288,6 +288,8 @@ class SolarEdgeOptimizersSensor(CoordinatorEntity, SensorEntity):
                         ):
                             self._attr_native_value = item.lifetime_energy
                             break
+                        else:
+                            self._attr_native_value = self._attr_native_value
                     elif self._sensor_type is SENSOR_TYPE_LASTMEASUREMENT:
                         self._attr_native_value = item.lastmeasurement
                         break
