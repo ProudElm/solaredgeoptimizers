@@ -5,7 +5,7 @@
   "documentation": "https://github.com/ProudElm/solaredgeoptimizers",
   "issue_tracker": "https://github.com/ProudElm/solaredgeoptimizers/issues",
   "requirements": [
-    "solaredgeoptimizers==1.0.8",
+    "solaredgeoptimizers==1.0.10",
     "jsonfinder==0.4.2"
   ],
   "ssdp": [],
@@ -16,5 +16,5 @@
     "@proudelm"
   ],
   "iot_class": "cloud_polling",
-  "version": "1.2.0"
+  "version": "1.2.1"
 }

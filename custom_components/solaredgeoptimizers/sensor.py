@@ -36,6 +36,7 @@ from .const import (
     SENSOR_TYPE_VOLTAGE,
     SENSOR_TYPE_ENERGY,
     SENSOR_TYPE_LASTMEASUREMENT,
+    CHECK_TIME_DELTA,
 )
 
 
@@ -149,18 +150,9 @@ class MyCoordinator(DataUpdateCoordinator):
                     self.my_api.requestAllData
                 )
 
-                now = datetime.now()
-                local_now = now.astimezone()
-                local_tz = local_now.tzinfo
-                local_tzname = local_tz.tzname(local_now)
-
-                # we need to check if we indeed need to update it all...
                 update = False
-                # timetocheck = datetime.now() - timedelta(hours=0, minutes=10)
 
-                timetocheck = datetime.now(pytz.timezone(local_tzname)) - timedelta(
-                    hours=1, minutes=00
-                )
+                timetocheck = datetime.now() - CHECK_TIME_DELTA
 
                 for optimizer in data:
                     _LOGGER.debug(
@@ -168,6 +160,7 @@ class MyCoordinator(DataUpdateCoordinator):
                         timetocheck,
                         optimizer.lastmeasurement,
                     )
+
                     if optimizer.lastmeasurement > timetocheck:
                         update = True
                         break
@@ -181,6 +174,8 @@ class MyCoordinator(DataUpdateCoordinator):
                     return None
 
         except Exception as err:
+            _LOGGER.error("Error in updating updater")
+            _LOGGER.error(err)
             raise UpdateFailed(err)
 
 
@@ -241,6 +236,8 @@ class SolarEdgeOptimizersSensor(CoordinatorEntity, SensorEntity):
             self._attr_native_unit_of_measurement = ENERGY_KILO_WATT_HOUR
             # self._attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
             self._attr_device_class = SensorDeviceClass.ENERGY
+        elif self._sensor_type is SENSOR_TYPE_LASTMEASUREMENT:
+            self._attr_device_class = SensorDeviceClass.DATE
 
     @property
     def device_info(self):
@@ -259,13 +256,15 @@ class SolarEdgeOptimizersSensor(CoordinatorEntity, SensorEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        _LOGGER.debug(
-            "De sensor %s - %s updaten met de info van de coordinator",
-            self._paneelobject.paneel_id,
-            self._sensor_type,
-        )
 
         if self.coordinator.data is not None:
+
+            _LOGGER.debug(
+                "De sensor %s - %s updaten met de info van de coordinator",
+                self._paneelobject.paneel_id,
+                self._sensor_type,
+            )
+
             for item in self.coordinator.data:
                 if item.paneel_id == self._paneelobject.paneel_id:
                     # weird first time after reboot value is None
@@ -294,9 +293,8 @@ class SolarEdgeOptimizersSensor(CoordinatorEntity, SensorEntity):
                         break
         else:
             # Set the value to zero. (BUT NOT FOR LIFETIME ENERGY)
-            if (
-                not self._sensor_type is SENSOR_TYPE_ENERGY
-                or self._sensor_type is SENSOR_TYPE_LASTMEASUREMENT
+            if (not self._sensor_type is SENSOR_TYPE_ENERGY) and (
+                not self._sensor_type is SENSOR_TYPE_LASTMEASUREMENT
             ):
                 self._attr_native_value = 0
 
