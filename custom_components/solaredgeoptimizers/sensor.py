@@ -40,20 +40,20 @@ from .const import (
 )
 
 
-from homeassistant.const import (
-    POWER_WATT,
-    ELECTRIC_POTENTIAL_VOLT,
-    ELECTRIC_CURRENT_AMPERE,
-    ENERGY_KILO_WATT_HOUR,
-)
+# from homeassistant.const import (
+#     POWER_WATT,
+#     ELECTRIC_POTENTIAL_VOLT,
+#     ELECTRIC_CURRENT_AMPERE,
+#     ENERGY_KILO_WATT_HOUR,
+# )
 
 # FROM 2023.2!
-# from homeassistant.const import (
-#     UnitOfPower,
-#     UnitOfElectricPotential,
-#     UnitOfElectricCurrent,
-#     UnitOfEnergy,
-# )
+from homeassistant.const import (
+    UnitOfPower,
+    UnitOfElectricPotential,
+    UnitOfElectricCurrent,
+    UnitOfEnergy,
+)
 
 from solaredgeoptimizers import (
     SolarEdgeOptimizerData,
@@ -217,27 +217,28 @@ class SolarEdgeOptimizersSensor(CoordinatorEntity, SensorEntity):
         )
 
         if self._sensor_type is SENSOR_TYPE_VOLTAGE:
-            self._attr_native_unit_of_measurement = ELECTRIC_POTENTIAL_VOLT
-            # self._attr_native_unit_of_measurement = UnitOfElectricPotential.VOLT
+            self._attr_native_unit_of_measurement = UnitOfElectricPotential.VOLT
             self._attr_device_class = SensorDeviceClass.VOLTAGE
+            self._attr_state_class = SensorStateClass.MEASUREMENT
         elif self._sensor_type is SENSOR_TYPE_CURRENT:
-            self._attr_native_unit_of_measurement = ELECTRIC_CURRENT_AMPERE
-            # self._attr_native_unit_of_measurement = UnitOfElectricCurrent.AMPERE
+            self._attr_native_unit_of_measurement = UnitOfElectricCurrent.AMPERE
             self._attr_device_class = SensorDeviceClass.CURRENT
+            self._attr_state_class = SensorStateClass.MEASUREMENT
         elif self._sensor_type is SENSOR_TYPE_OPT_VOLTAGE:
-            self._attr_native_unit_of_measurement = ELECTRIC_POTENTIAL_VOLT
-            # self._attr_native_unit_of_measurement = UnitOfElectricPotential.VOLT
+            self._attr_native_unit_of_measurement = UnitOfElectricPotential.VOLT
             self._attr_device_class = SensorDeviceClass.VOLTAGE
+            self._attr_state_class = SensorStateClass.MEASUREMENT
         elif self._sensor_type is SENSOR_TYPE_POWER:
-            self._attr_native_unit_of_measurement = POWER_WATT
-            # self._attr_native_unit_of_measurement = UnitOfPower.WATT
+            self._attr_native_unit_of_measurement = UnitOfPower.WATT
             self._attr_device_class = SensorDeviceClass.POWER
+            self._attr_state_class = SensorStateClass.MEASUREMENT
         elif self._sensor_type is SENSOR_TYPE_ENERGY:
-            self._attr_native_unit_of_measurement = ENERGY_KILO_WATT_HOUR
-            # self._attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
+            self._attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
             self._attr_device_class = SensorDeviceClass.ENERGY
+            self._attr_state_class = SensorStateClass.TOTAL_INCREASING
         elif self._sensor_type is SENSOR_TYPE_LASTMEASUREMENT:
             self._attr_device_class = SensorDeviceClass.DATE
+            self._attr_state_class = None
 
     @property
     def device_info(self):
