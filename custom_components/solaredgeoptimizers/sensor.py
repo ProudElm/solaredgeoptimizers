@@ -145,7 +145,7 @@ class MyCoordinator(DataUpdateCoordinator):
             # Note: asyncio.TimeoutError and aiohttp.ClientError are already
             # handled by the data update coordinator.
             async with async_timeout.timeout(60):
-                _LOGGER.debug("Update vanuit de coordinator")
+                _LOGGER.debug("Update from the coordinator")
                 data = await self.hass.async_add_executor_job(
                     self.my_api.requestAllData
                 )
@@ -166,11 +166,11 @@ class MyCoordinator(DataUpdateCoordinator):
                         break
 
                 if update or self.first_boot:
-                    _LOGGER.debug("We voeren nieuwe gegevens door")
+                    _LOGGER.debug("We enter new data")
                     self.first_boot = False
                     return data
                 else:
-                    _LOGGER.debug("Geen nieuwe gegevens door te voeren")
+                    _LOGGER.debug("No new data to enter")
                     return None
 
         except Exception as err:
@@ -261,7 +261,7 @@ class SolarEdgeOptimizersSensor(CoordinatorEntity, SensorEntity):
         if self.coordinator.data is not None:
 
             _LOGGER.debug(
-                "De sensor %s - %s updaten met de info van de coordinator",
+                "Update the sensor %s - %s with the info from the coordinator",
                 self._paneelobject.paneel_id,
                 self._sensor_type,
             )
