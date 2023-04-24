@@ -144,7 +144,7 @@ class MyCoordinator(DataUpdateCoordinator):
         try:
             # Note: asyncio.TimeoutError and aiohttp.ClientError are already
             # handled by the data update coordinator.
-            async with async_timeout.timeout(60):
+            async with async_timeout.timeout(300):
                 _LOGGER.debug("Update from the coordinator")
                 data = await self.hass.async_add_executor_job(
                     self.my_api.requestAllData
