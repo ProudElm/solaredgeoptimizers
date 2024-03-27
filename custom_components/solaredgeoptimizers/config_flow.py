@@ -1,9 +1,11 @@
 """Config flow for SolarEdge Optimizers Data integration."""
+
 from __future__ import annotations
 
 import logging
 from typing import Any
 
+from solaredgeoptimizers import solaredgeoptimizers
 import voluptuous as vol
 
 from homeassistant import config_entries
@@ -12,8 +14,6 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 
 from .const import DOMAIN
-
-from solaredgeoptimizers import solaredgeoptimizers
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 
 
 class SolarEdgeWebAuth:
-    """boe"""
+    """boe."""
 
     def __init__(self, siteid: str) -> None:
         """Initialize."""
@@ -42,10 +42,7 @@ class SolarEdgeWebAuth:
         )
         # http_result_code = api.check_login()
         http_result_code = await hass.async_add_executor_job(api.check_login)
-        if http_result_code == 200:
-            return True
-        else:
-            return False
+        return http_result_code == 200
 
 
 async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
@@ -91,7 +88,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             _LOGGER.exception("Unexpected exception")
             errors["base"] = "unknown"
         else:
-
             return self.async_create_entry(title=info["title"], data=user_input)
 
         return self.async_show_form(

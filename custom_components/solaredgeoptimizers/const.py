@@ -1,10 +1,13 @@
 """Constants for the SolarEdge Optimizers Data integration."""
+
 from datetime import timedelta
 import logging
 
 DOMAIN = "solaredgeoptimizers"
 CONF_SITE_ID = "siteid"
 DATA_API_CLIENT = "api_client"
+DATA_COORDINATOR = "coordinator"
+DATA_SITE = "site"
 
 PANEEL_DATA = "paneel_data"
 
