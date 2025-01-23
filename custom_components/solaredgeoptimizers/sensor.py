@@ -4,12 +4,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
 
-from datetime import datetime, timedelta
-
 import logging
-
-import async_timeout
-import pytz
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -21,14 +16,10 @@ from homeassistant.core import callback
 
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
-    DataUpdateCoordinator,
-    UpdateFailed,
 )
 
 from .const import (
-    DATA_API_CLIENT,
     DOMAIN,
-    UPDATE_DELAY,
     SENSOR_TYPE,
     SENSOR_TYPE_OPT_VOLTAGE,
     SENSOR_TYPE_CURRENT,
@@ -36,18 +27,10 @@ from .const import (
     SENSOR_TYPE_VOLTAGE,
     SENSOR_TYPE_ENERGY,
     SENSOR_TYPE_LASTMEASUREMENT,
-    CHECK_TIME_DELTA,
 )
 
+from .coordinator import MyCoordinator
 
-# from homeassistant.const import (
-#     POWER_WATT,
-#     ELECTRIC_POTENTIAL_VOLT,
-#     ELECTRIC_CURRENT_AMPERE,
-#     ENERGY_KILO_WATT_HOUR,
-# )
-
-# FROM 2023.2!
 from homeassistant.const import (
     UnitOfPower,
     UnitOfElectricPotential,
@@ -57,7 +40,6 @@ from homeassistant.const import (
 
 from solaredgeoptimizers import (
     SolarEdgeOptimizerData,
-    solaredgeoptimizers,
     SolarlEdgeOptimizer,
 )
 
@@ -71,10 +53,9 @@ async def async_setup_entry(
 ) -> None:
     """Add an solarEdge entry."""
     # Add the needed sensors to hass
-    my_api = hass.data[DOMAIN][entry.entry_id][DATA_API_CLIENT]
-    site = await hass.async_add_executor_job(my_api.requestListOfAllPanels)
+    coordinator: MyCoordinator = hass.data[DOMAIN][entry.entry_id]
 
-    coordinator = MyCoordinator(hass, my_api, True)
+    site = await hass.async_add_executor_job(coordinator.my_api.requestListOfAllPanels)
 
     _LOGGER.info("Found all information for site: %s", site.siteId)
     _LOGGER.info("Site has %s inverters", len(site.inverters))
@@ -95,7 +76,7 @@ async def async_setup_entry(
 
                 # extra informatie ophalen
                 info = await hass.async_add_executor_job(
-                    my_api.requestSystemData, optimizer.optimizerId
+                    coordinator.my_api.requestSystemData, optimizer.optimizerId
                 )
 
                 if info is not None:
@@ -117,66 +98,6 @@ async def async_setup_entry(
     _LOGGER.info(
         "Done adding all optimizers. Now adding sensors, this may take some time!"
     )
-
-
-class MyCoordinator(DataUpdateCoordinator):
-    """My custom coordinator."""
-
-    def __init__(self, hass, my_api: solaredgeoptimizers, first_boot):
-        """Initialize my coordinator."""
-        super().__init__(
-            hass,
-            _LOGGER,
-            # Name of the data. For logging purposes.
-            name="SolarEdgeOptimizer",
-            # Polling interval. Will only be polled if there are subscribers.
-            update_interval=UPDATE_DELAY,
-        )
-        self.my_api = my_api
-        self.first_boot = first_boot
-
-    async def _async_update_data(self):
-        """Fetch data from API endpoint.
-
-        This is the place to pre-process the data to lookup tables
-        so entities can quickly look up their data.
-        """
-        try:
-            # Note: asyncio.TimeoutError and aiohttp.ClientError are already
-            # handled by the data update coordinator.
-            async with async_timeout.timeout(300):
-                _LOGGER.debug("Update from the coordinator")
-                data = await self.hass.async_add_executor_job(
-                    self.my_api.requestAllData
-                )
-
-                update = False
-
-                timetocheck = datetime.now() - CHECK_TIME_DELTA
-
-                for optimizer in data:
-                    _LOGGER.debug(
-                        "Checking time: %s | Versus last measerument: %s",
-                        timetocheck,
-                        optimizer.lastmeasurement,
-                    )
-
-                    if optimizer.lastmeasurement > timetocheck:
-                        update = True
-                        break
-
-                if update or self.first_boot:
-                    _LOGGER.debug("We enter new data")
-                    self.first_boot = False
-                    return data
-                else:
-                    _LOGGER.debug("No new data to enter")
-                    return None
-
-        except Exception as err:
-            _LOGGER.error("Error in updating updater")
-            _LOGGER.error(err)
-            raise UpdateFailed(err)
 
 
 # class MyEntity(CoordinatorEntity, SensorEntity):
