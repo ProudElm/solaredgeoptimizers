@@ -251,7 +251,6 @@ class SolarEdgeOptimizersSensor(CoordinatorEntity, SensorEntity):
             "manufacturer": self._paneelobject.manufacturer,
             "model": self._paneelobject.model,
             "hw_version": self._paneelobject.serialnumber,
-            "via_device": (DOMAIN, self._entry.entry_id),
         }
 
     @callback
