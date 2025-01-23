@@ -38,6 +38,36 @@ class MyCoordinator(DataUpdateCoordinator):
         self.my_api = my_api
         self.first_boot = first_boot
 
+    async def _async_setup(self) -> None:
+        """Set up the coordinator.
+
+        Can be overwritten by integrations to load data or resources
+        only once during the first refresh.
+        """
+
+        site = await self.hass.async_add_executor_job(self.my_api.requestListOfAllPanels)
+
+        _LOGGER.info("Found all information for site: %s", site.siteId)
+        _LOGGER.info("Site has %s inverters", len(site.inverters))
+        _LOGGER.info(
+            "Adding all optimizers (%s) found to Home Assistant",
+            site.returnNumberOfOptimizers(),
+        )
+        
+
+        i = 1
+        for inverter in site.inverters:
+            _LOGGER.info("Adding all optimizers from inverter: %s", i)
+
+            device_registry = dr.async_get(self.hass)
+            device_registry.async_get_or_create(
+                config_entry_id=self.config_entry.entry_id,
+                identifiers={(DOMAIN, inverter.serialNumber)},
+                manufacturer="SolarEdge",
+                model=inverter.type,
+                name=inverter.displayName,
+            )
+
     async def _async_update_data(self):
         """Fetch data from API endpoint.
 

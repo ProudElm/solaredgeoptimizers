@@ -90,6 +90,7 @@ async def async_setup_entry(
                                     info,
                                     sensortype,
                                     optimizer,
+                                    inverter
                                 )
                             ],
                             update_before_add=True,
@@ -122,12 +123,14 @@ class SolarEdgeOptimizersSensor(CoordinatorEntity, SensorEntity):
         paneel: SolarEdgeOptimizerData,
         sensortype,
         optimizer: SolarlEdgeOptimizer,
+        inverter
     ) -> None:
         super().__init__(coordinator)
         self._hass = hass
         self._entry = entry
         self._paneelobject = paneel
         self._optimizerobject = optimizer
+        self._inverter = inverter
         self._paneel = paneel.paneel_desciption
         self._attr_unique_id = "{}_{}".format(paneel.serialnumber, sensortype)
         self._sensor_type = sensortype
@@ -172,7 +175,7 @@ class SolarEdgeOptimizersSensor(CoordinatorEntity, SensorEntity):
             "manufacturer": self._paneelobject.manufacturer,
             "model": self._paneelobject.model,
             "hw_version": self._paneelobject.serialnumber,
-            "via_device": (DOMAIN, self._entry.entry_id),
+            "via_device": (DOMAIN, self._inverter.serialNumber),
         }
 
     @callback
