@@ -301,4 +301,8 @@ class SolarEdgeOptimizersSensor(CoordinatorEntity, SensorEntity):
             ):
                 self._attr_native_value = 0
 
+        value = self._attr_native_value
+        if isinstance(value, str) and "," in value:
+            self._attr_native_value = float(value.replace(",", ""))
+
         self.async_write_ha_state()
