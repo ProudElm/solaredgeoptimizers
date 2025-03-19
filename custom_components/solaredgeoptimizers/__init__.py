@@ -8,12 +8,10 @@ from homeassistant.exceptions import ConfigEntryNotReady
 
 from solaredgeoptimizers import solaredgeoptimizers
 from .const import (
-    CONF_SITE_ID,
     DOMAIN,
     LOGGER,
-    DATA_API_CLIENT,
-    PANEEL_DATA,
 )
+from .coordinator import MyCoordinator
 
 PLATFORMS: list[Platform] = [Platform.SENSOR]
 
@@ -35,7 +33,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         raise ConfigEntryNotReady
 
     hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = {DATA_API_CLIENT: api}
+
+    coordinator = MyCoordinator(hass, api, True)
+
+    # Fetch initial data so we have data when entities subscribe
+    #
+    # If the refresh fails, async_config_entry_first_refresh will
+    # raise ConfigEntryNotReady and setup will try again later
+    await coordinator.async_config_entry_first_refresh()
+
+    hass.data[DOMAIN][entry.entry_id] = coordinator
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
